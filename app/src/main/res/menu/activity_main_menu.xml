@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/updateGamesMenu"
+        android:icon="@drawable/baseline_refresh_24"
+        android:title="Actualizar Juegos" />
+
+    <item
+        android:id="@+id/backupGamesMenu"
+        android:icon="@drawable/baseline_backup_24"
+        android:title="Respaldar Juegos" />
+</menu>
