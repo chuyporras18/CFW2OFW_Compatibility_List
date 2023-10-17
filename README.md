@@ -39,3 +39,7 @@ Application created based on the website: https://www.psdevwiki.com/ps3/CFW2OFW_
 
 # Languagues
 1. Kotlin
+
+# App Languagues
+1. Spanish
+2. English (soon)
