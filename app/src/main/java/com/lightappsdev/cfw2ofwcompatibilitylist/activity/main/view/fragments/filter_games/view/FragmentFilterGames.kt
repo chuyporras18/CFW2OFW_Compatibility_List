@@ -52,6 +52,8 @@ class FragmentFilterGames : DialogFragment() {
 
         binding.cancelBtn.setOnClickListener { dialog?.dismiss() }
 
+        val gameIds = viewModel.gameIdsProvider.generateGameIds()
+
         binding.acceptBtn.setOnClickListener {
             val viewModel =
                 ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
@@ -59,11 +61,20 @@ class FragmentFilterGames : DialogFragment() {
             val booleanArray = this.viewModel.checkedFilter.value
             val filterBooleanArray = this.viewModel.gameCheckedFilter.value
             val allGamesCheckedFilter = this.viewModel.allGamesCheckedFilter.value
+            val gameIdsCheckedFilter = this.viewModel.gameIdsCheckedFilter.value?.toList().orEmpty()
+                .mapIndexedNotNull { index, b ->
+                    if (b) {
+                        gameIds[index]
+                    } else {
+                        null
+                    }
+                }.toSet()
             viewModel.filterDialogResponse(
                 sortGamesTypes = sortGamesTypes,
                 booleanArray = booleanArray,
                 filterBooleanArray = filterBooleanArray,
-                allGamesCheckedFilter = allGamesCheckedFilter
+                allGamesCheckedFilter = allGamesCheckedFilter,
+                gameIdsSet = gameIdsCheckedFilter
             )
             dialog?.dismiss()
         }
@@ -88,6 +99,20 @@ class FragmentFilterGames : DialogFragment() {
         }
 
         addAllGamesCheckBox()
+
+        val gameIdsBooleanArray = viewModel.getGameIdsCheckedFilters()
+        gameIds.forEachIndexed { index, s ->
+            val checkBox = generateCheckBox(
+                message = s,
+                isChecked = gameIdsBooleanArray[index],
+                id = "${s}_$index".hashCode()
+            ) { isChecked ->
+                gameIdsBooleanArray[index] = isChecked
+                viewModel.gameIdsCheckedFilter(gameIdsBooleanArray)
+            }
+
+            binding.idsCheckBox.addView(checkBox)
+        }
 
         val gameWorksBooleanArray = viewModel.getGameWorkCheckedFilters()
         GameWorkTypes.values().forEachIndexed { index, gameWorkTypes ->
@@ -131,7 +156,7 @@ class FragmentFilterGames : DialogFragment() {
         val isAllGamesChecked = viewModel.getAllGamesFilterChecked()
         viewModel.allGamesCheckedFilter(isAllGamesChecked)
         val checkBox =
-            generateCheckBox("Todos", isAllGamesChecked, ALL_GAMES_CHECKBOX_ID) { isChecked ->
+            generateCheckBox("Todos los Juegos y Regiones", isAllGamesChecked, ALL_GAMES_CHECKBOX_ID) { isChecked ->
                 toggleCheckboxOnAllGamesChecked(isChecked)
                 viewModel.toggleAllGamesCheckedFilter()
             }
@@ -139,7 +164,7 @@ class FragmentFilterGames : DialogFragment() {
     }
 
     private fun toggleCheckboxOnAllGamesChecked(isChecked: Boolean) {
-        binding.checkBox.allViews.forEach { view ->
+        (binding.checkBox.allViews + binding.idsCheckBox.allViews).forEach { view ->
             if (view.id == ALL_GAMES_CHECKBOX_ID || view !is MaterialCheckBox) {
                 return@forEach
             }

@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity(), GameAdapterListener {
             launch {
                 viewModel.gameList.collectLatest { list ->
                     viewModel.gameAdapter.value?.list = list
+
                     viewModel.headers(list.filterIsInstance<GameHeaderModel>()
                         .map { gameHeaderModel -> gameHeaderModel.header })
                 }

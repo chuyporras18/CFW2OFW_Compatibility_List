@@ -11,6 +11,7 @@ import com.lightappsdev.cfw2ofwcompatibilitylist.R
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.adapters.GameAdapter
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.core.GameBackupProvider
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.core.GameDataProvider
+import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.core.GameIdsProvider
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.core.GameListProvider
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.enums.GameAdapterTypes
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.enums.GameFiltersType
@@ -18,6 +19,7 @@ import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.enums.GameWorkTyp
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.GameAdapterModel
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.GameFilterStates
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.GameHeaderModel
+import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.GameIdEntity
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.GameWithIdsEntity
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.UpdateGamesState
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.model.toDomain
@@ -43,7 +45,8 @@ import javax.inject.Inject
 class MainActivityViewModel @Inject constructor(
     private val gameListProvider: GameListProvider,
     private val gameDataProvider: GameDataProvider,
-    private val gameBackupProvider: GameBackupProvider
+    private val gameBackupProvider: GameBackupProvider,
+    private val gameIdsProvider: GameIdsProvider
 ) : ViewModel() {
 
     companion object {
@@ -51,6 +54,7 @@ class MainActivityViewModel @Inject constructor(
         const val GAME_CHECKED_FILTERS_KEY: String = "game_checked_filters"
         const val SORT_GAME_TYPES_KEY: String = "sort_game_types"
         const val ALL_GAMES_CHECKED_FILTER_KEY: String = "all_games_checked_filter"
+        const val GAME_IDS_CHECKED_FILTER_KEY: String = "game_ids_checked_filters"
     }
 
     private val _gameFilterStates: MutableStateFlow<GameFilterStates> =
@@ -79,8 +83,13 @@ class MainActivityViewModel @Inject constructor(
                         isValidCheckedFilters(gameFilterStates.workFilters, gameWithIdsEntity)
                     val isValidGameCheckedFilters =
                         isValidGameCheckedFilters(gameFilterStates.gameFilters, gameWithIdsEntity)
+                    val isValidGameIdsCheckedFilters =
+                        isValidGameIdsCheckedFilters(
+                            gameFilterStates.gameIdsFilters,
+                            gameWithIdsEntity.gameIdEntity
+                        )
 
-                    if (!isValidCheckedFilters || !isValidGameCheckedFilters) {
+                    if (!isValidCheckedFilters || !isValidGameCheckedFilters || !isValidGameIdsCheckedFilters) {
                         return@forEach
                     }
                 }
@@ -139,11 +148,24 @@ class MainActivityViewModel @Inject constructor(
 
         val allGamesChecked = cfw2OfwApp.preferences.getBoolean(ALL_GAMES_CHECKED_FILTER_KEY, true)
 
+        val gameIds = gameIdsProvider.generateGameIds()
+        val gameIdsCheckedFilter =
+            (cfw2OfwApp.preferences.getString(GAME_IDS_CHECKED_FILTER_KEY, null)
+                ?.fromJson<BooleanArray>() ?: BooleanArray(gameIds.size) { true }).toList()
+                .mapIndexedNotNull { index, b ->
+                    if (b) {
+                        gameIds[index]
+                    } else {
+                        null
+                    }
+                }.toSet()
+
         _gameFilterStates.value = _gameFilterStates.value.copy(
             sortGamesTypes = sortGamesTypes,
             workFilters = gameWorkTypes,
             gameFilters = gameFiltersTypes,
-            allGamesChecked = allGamesChecked
+            allGamesChecked = allGamesChecked,
+            gameIdsFilters = gameIdsCheckedFilter
         )
     }
 
@@ -151,7 +173,8 @@ class MainActivityViewModel @Inject constructor(
         sortGamesTypes: SortGamesTypes?,
         booleanArray: BooleanArray?,
         filterBooleanArray: BooleanArray?,
-        allGamesCheckedFilter: Boolean?
+        allGamesCheckedFilter: Boolean?,
+        gameIdsSet: Set<String>?
     ) {
         val gameWorkTypes = GameWorkTypes.values()
             .filterIndexed { index, _ -> booleanArray?.getOrNull(index) == true }
@@ -162,16 +185,21 @@ class MainActivityViewModel @Inject constructor(
             sortGamesTypes = sortGamesTypes,
             workFilters = gameWorkTypes,
             gameFilters = gameFiltersTypes,
-            allGamesChecked = allGamesCheckedFilter ?: false
+            allGamesChecked = allGamesCheckedFilter ?: false,
+            gameIdsFilters = gameIdsSet
         )
 
         togglePlatinumFilter()
+
+        val gameIdsCheckedFilter =
+            gameIdsProvider.generateGameIds().map { gameIdsSet.orEmpty().contains(it) }
 
         cfw2OfwApp.preferences.edit()
             .putString(CHECKED_FILTERS_KEY, booleanArray?.toJson())
             .putString(GAME_CHECKED_FILTERS_KEY, filterBooleanArray?.toJson())
             .putString(SORT_GAME_TYPES_KEY, sortGamesTypes?.name)
             .putBoolean(ALL_GAMES_CHECKED_FILTER_KEY, allGamesCheckedFilter ?: false)
+            .putString(GAME_IDS_CHECKED_FILTER_KEY, gameIdsCheckedFilter.toJson())
             .apply()
     }
 
@@ -290,5 +318,14 @@ class MainActivityViewModel @Inject constructor(
         val gameModel = gameWithIdsEntity.gameEntity.toDomain()
 
         return list.orEmpty().any { gameFiltersType -> gameFiltersType.filterPredicate(gameModel) }
+    }
+
+    private fun isValidGameIdsCheckedFilters(
+        gameIdsFilters: Set<String>?,
+        gameIdEntity: List<GameIdEntity>
+    ): Boolean {
+        val ids = gameIdEntity.mapNotNull { it.gameCountryCode.chunked(4).firstOrNull() }
+
+        return gameIdsFilters.orEmpty().any { id -> id in ids }
     }
 }

@@ -9,5 +9,6 @@ data class GameFilterStates(
     val sortGamesTypes: SortGamesTypes? = null,
     val workFilters: List<GameWorkTypes>? = null,
     val gameFilters: List<GameFiltersType>? = null,
-    val allGamesChecked: Boolean = true
+    val allGamesChecked: Boolean = true,
+    val gameIdsFilters: Set<String>? = null
 )

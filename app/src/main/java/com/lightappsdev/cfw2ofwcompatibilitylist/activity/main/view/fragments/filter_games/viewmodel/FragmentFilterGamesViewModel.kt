@@ -3,6 +3,7 @@ package com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.view.fragments.f
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.core.GameIdsProvider
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.enums.GameFiltersType
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.enums.GameWorkTypes
 import com.lightappsdev.cfw2ofwcompatibilitylist.activity.main.view.fragments.filter_games.enums.SortGamesTypes
@@ -13,7 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class FragmentFilterGamesViewModel @Inject constructor() : ViewModel() {
+class FragmentFilterGamesViewModel @Inject constructor(val gameIdsProvider: GameIdsProvider) : ViewModel() {
 
     private val _sortGamesTypes: MutableLiveData<SortGamesTypes> = MutableLiveData()
     val sortGamesTypes: LiveData<SortGamesTypes> = _sortGamesTypes
@@ -23,6 +24,9 @@ class FragmentFilterGamesViewModel @Inject constructor() : ViewModel() {
 
     private val _gameCheckedFilter: MutableLiveData<BooleanArray> = MutableLiveData()
     val gameCheckedFilter: LiveData<BooleanArray> = _gameCheckedFilter
+
+    private val _gameIdsCheckedFilter: MutableLiveData<BooleanArray> = MutableLiveData()
+    val gameIdsCheckedFilter: LiveData<BooleanArray> = _gameIdsCheckedFilter
 
     private val _allGamesCheckedFilter: MutableLiveData<Boolean> = MutableLiveData(false)
     val allGamesCheckedFilter: LiveData<Boolean> = _allGamesCheckedFilter
@@ -40,6 +44,19 @@ class FragmentFilterGamesViewModel @Inject constructor() : ViewModel() {
                 ?.fromJson<BooleanArray>() ?: BooleanArray(filterGamesTypes.size) { true }
 
         _checkedFilter.value = booleanArray
+
+        return booleanArray
+    }
+
+    fun getGameIdsCheckedFilters(): BooleanArray {
+        val filterGameIds = gameIdsProvider.generateGameIds()
+
+        val booleanArray = cfw2OfwApp.preferences.getString(
+            MainActivityViewModel.GAME_IDS_CHECKED_FILTER_KEY,
+            null
+        )?.fromJson<BooleanArray>() ?: BooleanArray(filterGameIds.size) { true }
+
+        _gameIdsCheckedFilter.value = booleanArray
 
         return booleanArray
     }
@@ -71,6 +88,10 @@ class FragmentFilterGamesViewModel @Inject constructor() : ViewModel() {
 
     fun checkedFilters(booleanArray: BooleanArray) {
         _checkedFilter.value = booleanArray
+    }
+
+    fun gameIdsCheckedFilter(booleanArray: BooleanArray) {
+        _gameIdsCheckedFilter.value = booleanArray
     }
 
     fun gameCheckedFilters(booleanArray: BooleanArray) {
